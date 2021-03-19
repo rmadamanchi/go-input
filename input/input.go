@@ -13,8 +13,14 @@ import (
 
 type Input struct {
 	Prompt      string
-	Choices     []string
-	KeyBindings map[keyboard.Key]func(*Input, string)
+	Choices     []Choice
+	PageSize    int
+	KeyBindings map[keyboard.Key]func(*Input, Choice)
+}
+
+type Choice struct {
+	Data  interface{}
+	Value string
 }
 
 func (i *Input) Clear() {
@@ -39,12 +45,17 @@ func (i *Input) Ask() {
 		_ = keyboard.Close()
 	}()
 
+	pageSize := i.PageSize
+	if pageSize == 0 {
+		pageSize = 10
+	}
+
 	input := ""
 	index := 0
 	selectedIndex := 0
 	matchingChoices := match(i.Choices, input)
 	viewStartIndex := 0
-	viewEndIndex := min(len(matchingChoices), 10)
+	viewEndIndex := min(len(matchingChoices), pageSize)
 
 	printSelection(i.Prompt, input, index, matchingChoices, selectedIndex, viewStartIndex, viewEndIndex)
 
@@ -59,14 +70,14 @@ func (i *Input) Ask() {
 			index += 1
 			matchingChoices = match(i.Choices, input)
 			viewStartIndex = 0
-			viewEndIndex = min(len(matchingChoices), 10)
+			viewEndIndex = min(len(matchingChoices), pageSize)
 			selectedIndex = 0
 		} else if key == keyboard.KeySpace {
 			input = input[:index] + string(" ") + input[index:]
 			index += 1
 			matchingChoices = match(i.Choices, input)
 			viewStartIndex = 0
-			viewEndIndex = min(len(matchingChoices), 10)
+			viewEndIndex = min(len(matchingChoices), pageSize)
 			selectedIndex = 0
 		} else if key == keyboard.KeyArrowLeft {
 			index = max(0, index-1)
@@ -90,7 +101,7 @@ func (i *Input) Ask() {
 				index -= 1
 				matchingChoices = match(i.Choices, input)
 				viewStartIndex = 0
-				viewEndIndex = min(len(matchingChoices), 10)
+				viewEndIndex = min(len(matchingChoices), pageSize)
 				selectedIndex = 0
 			}
 		} else if keyBindingFn, ok := i.KeyBindings[key]; ok {
@@ -101,17 +112,17 @@ func (i *Input) Ask() {
 	}
 }
 
-func match(choices []string, input string) []string {
-	matchingChoices := make([]string, 0)
+func match(choices []Choice, input string) []Choice {
+	matchingChoices := make([]Choice, 0)
 	for _, choice := range choices {
-		if strings.Contains(strings.ToLower(choice), strings.ToLower(input)) {
+		if strings.Contains(strings.ToLower(choice.Value), strings.ToLower(input)) {
 			matchingChoices = append(matchingChoices, choice)
 		}
 	}
 	return matchingChoices
 }
 
-func printSelection(prompt string, input string, index int, matchingChoices []string, selectedIndex int, viewStartIndex int, viewEndIndex int) {
+func printSelection(prompt string, input string, index int, matchingChoices []Choice, selectedIndex int, viewStartIndex int, viewEndIndex int) {
 	fmt.Print("\x1b[s")                                  // save cursor
 	fmt.Print("\x1b[1000D")                              // move cursor to left
 	fmt.Print("\x1b[K")                                  // clear line
@@ -121,11 +132,11 @@ func printSelection(prompt string, input string, index int, matchingChoices []st
 		choice := matchingChoices[i]
 		if i >= viewStartIndex && i < viewEndIndex {
 			fmt.Print("\x1b[K") // clear current line
-			matchIndex := strings.Index(strings.ToLower(choice), strings.ToLower(input))
+			matchIndex := strings.Index(strings.ToLower(choice.Value), strings.ToLower(input))
 
-			preMatchPart := choice[0:matchIndex]
-			matchPart := choice[matchIndex : matchIndex+len(input)]
-			postMatchPart := choice[matchIndex+len(input):]
+			preMatchPart := choice.Value[0:matchIndex]
+			matchPart := choice.Value[matchIndex : matchIndex+len(input)]
+			postMatchPart := choice.Value[matchIndex+len(input):]
 			if i == selectedIndex {
 				fmt.Println("\x1b[30;47m" + preMatchPart + "\x1b[36m" + matchPart + "\x1b[30;47m" + postMatchPart + "\x1b[0m")
 			} else {
