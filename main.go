@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/eiannone/keyboard"
 	"github.com/rmadamanchi/go-input/input"
 )
 
@@ -62,11 +63,16 @@ func main() {
 	i := &input.Input{
 		Prompt:  "> ",
 		Choices: choices,
-		SelectedFn: func(choice string) {
-			fmt.Println("\nselected: " + choice)
-			fmt.Print("\x1b[0J")
-			os.Exit(0)
-		},
+		KeyBindings: map[keyboard.Key]func(*input.Input, string){
+			keyboard.KeyEnter: func(i *input.Input, choice string) {
+				i.Clear()
+				fmt.Println("\nselected: " + choice)
+				os.Exit(0)
+			},
+			keyboard.KeyEsc: func(i *input.Input, choice string) {
+				i.Clear()
+				os.Exit(0)
+			}},
 	}
 
 	i.Ask()

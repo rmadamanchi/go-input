@@ -12,9 +12,13 @@ import (
 )
 
 type Input struct {
-	Prompt     string
-	Choices    []string
-	SelectedFn func(string)
+	Prompt      string
+	Choices     []string
+	KeyBindings map[keyboard.Key]func(*Input, string)
+}
+
+func (i *Input) Clear() {
+	fmt.Print("\x1b[0J") // clear till end of screen
 }
 
 func (i *Input) Ask() {
@@ -50,10 +54,7 @@ func (i *Input) Ask() {
 			panic(err)
 		}
 
-		if key == keyboard.KeyEsc || key == keyboard.KeyCtrlC {
-			fmt.Print("\x1b[0J")
-			break
-		} else if char >= 32 && char <= 126 {
+		if char >= 32 && char <= 126 {
 			input = input[:index] + string(char) + input[index:]
 			index += 1
 			matchingChoices = match(i.Choices, input)
@@ -68,7 +69,7 @@ func (i *Input) Ask() {
 			viewEndIndex = min(len(matchingChoices), 10)
 			selectedIndex = 0
 		} else if key == keyboard.KeyArrowLeft {
-			index = max(len(i.Prompt), index-1)
+			index = max(0, index-1)
 		} else if key == keyboard.KeyArrowRight {
 			index = min(len(input), index+1)
 		} else if key == keyboard.KeyArrowDown {
@@ -92,8 +93,8 @@ func (i *Input) Ask() {
 				viewEndIndex = min(len(matchingChoices), 10)
 				selectedIndex = 0
 			}
-		} else if key == keyboard.KeyEnter && i.SelectedFn != nil {
-			i.SelectedFn(matchingChoices[selectedIndex])
+		} else if keyBindingFn, ok := i.KeyBindings[key]; ok {
+			keyBindingFn(i, matchingChoices[selectedIndex])
 		}
 
 		printSelection(i.Prompt, input, index, matchingChoices, selectedIndex, viewStartIndex, viewEndIndex)
