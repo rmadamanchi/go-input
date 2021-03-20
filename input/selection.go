@@ -16,6 +16,7 @@ type Selection struct {
 	Choices          []Choice
 	PageSize         int
 	DefaultSelection string
+	ValueFn          func(*Choice) string
 	KeyBindings      map[keyboard.Key]func(*Selection, Choice)
 }
 
@@ -55,7 +56,7 @@ func (s *Selection) Ask() {
 	selectedIndex := 0
 	if s.DefaultSelection != "" {
 		for i, choice := range s.Choices {
-			if choice.Value == s.DefaultSelection {
+			if s.getValue(&choice) == s.DefaultSelection {
 				selectedIndex = i
 			}
 		}
@@ -121,10 +122,18 @@ func (s *Selection) Ask() {
 	}
 }
 
+func (s *Selection) getValue(c *Choice) string {
+	if s.ValueFn != nil {
+		return s.ValueFn(c)
+	} else {
+		return c.Value
+	}
+}
+
 func (s *Selection) match(input string) []Choice {
 	matchingChoices := make([]Choice, 0)
 	for _, choice := range s.Choices {
-		if strings.Contains(strings.ToLower(choice.Value), strings.ToLower(input)) {
+		if strings.Contains(strings.ToLower(s.getValue(&choice)), strings.ToLower(input)) {
 			matchingChoices = append(matchingChoices, choice)
 		}
 	}
@@ -140,12 +149,13 @@ func (s *Selection) render(input string, index int, matchingChoices []Choice, se
 	for i := 0; i < len(matchingChoices); i++ {
 		choice := matchingChoices[i]
 		if i >= viewStartIndex && i < viewStartIndex+s.PageSize {
+			value := s.getValue(&choice)
 			fmt.Print("\x1b[K") // clear current line
-			matchIndex := strings.Index(strings.ToLower(choice.Value), strings.ToLower(input))
+			matchIndex := strings.Index(strings.ToLower(value), strings.ToLower(input))
 
-			preMatchPart := choice.Value[0:matchIndex]
-			matchPart := choice.Value[matchIndex : matchIndex+len(input)]
-			postMatchPart := choice.Value[matchIndex+len(input):]
+			preMatchPart := value[0:matchIndex]
+			matchPart := value[matchIndex : matchIndex+len(input)]
+			postMatchPart := value[matchIndex+len(input):]
 			if i == selectedIndex {
 				fmt.Println("\x1b[30;47m" + preMatchPart + "\x1b[36m" + matchPart + "\x1b[30;47m" + postMatchPart + "\x1b[0m")
 			} else {

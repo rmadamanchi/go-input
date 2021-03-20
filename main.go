@@ -65,6 +65,9 @@ func main() {
 		Choices:          choices,
 		PageSize:         10,
 		DefaultSelection: "South Carolina",
+		ValueFn: func(c *input.Choice) string {
+			return c.Value
+		},
 		KeyBindings: map[keyboard.Key]func(*input.Selection, input.Choice){
 			keyboard.KeyEnter: func(i *input.Selection, choice input.Choice) {
 				i.Clear()
