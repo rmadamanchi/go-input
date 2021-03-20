@@ -11,11 +11,12 @@ import (
 	"golang.org/x/term"
 )
 
-type Input struct {
-	Prompt      string
-	Choices     []Choice
-	PageSize    int
-	KeyBindings map[keyboard.Key]func(*Input, Choice)
+type Selection struct {
+	Prompt           string
+	Choices          []Choice
+	PageSize         int
+	DefaultSelection string
+	KeyBindings      map[keyboard.Key]func(*Selection, Choice)
 }
 
 type Choice struct {
@@ -23,11 +24,11 @@ type Choice struct {
 	Value string
 }
 
-func (i *Input) Clear() {
+func (s *Selection) Clear() {
 	fmt.Print("\x1b[0J") // clear till end of screen
 }
 
-func (i *Input) Ask() {
+func (s *Selection) Ask() {
 	state, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		log.Fatalln("setting stdin to raw:", err)
@@ -45,7 +46,7 @@ func (i *Input) Ask() {
 		_ = keyboard.Close()
 	}()
 
-	pageSize := i.PageSize
+	pageSize := s.PageSize
 	if pageSize == 0 {
 		pageSize = 10
 	}
@@ -53,11 +54,25 @@ func (i *Input) Ask() {
 	input := ""
 	index := 0
 	selectedIndex := 0
-	matchingChoices := match(i.Choices, input)
-	viewStartIndex := 0
-	viewEndIndex := min(len(matchingChoices), pageSize)
+	if s.DefaultSelection != "" {
+		for i, choice := range s.Choices {
+			if choice.Value == s.DefaultSelection {
+				selectedIndex = i
+			}
+		}
+	}
 
-	printSelection(i.Prompt, input, index, matchingChoices, selectedIndex, viewStartIndex, viewEndIndex)
+	matchingChoices := match(s.Choices, input)
+	viewStartIndex := 0
+	if selectedIndex >= pageSize {
+		if selectedIndex > len(matchingChoices)-pageSize {
+			viewStartIndex = len(matchingChoices) - pageSize
+		} else {
+			viewStartIndex = selectedIndex
+		}
+	}
+
+	printSelection(s.Prompt, input, index, matchingChoices, selectedIndex, viewStartIndex, pageSize)
 
 	for {
 		char, key, err := keyboard.GetKey()
@@ -68,16 +83,14 @@ func (i *Input) Ask() {
 		if char >= 32 && char <= 126 {
 			input = input[:index] + string(char) + input[index:]
 			index += 1
-			matchingChoices = match(i.Choices, input)
+			matchingChoices = match(s.Choices, input)
 			viewStartIndex = 0
-			viewEndIndex = min(len(matchingChoices), pageSize)
 			selectedIndex = 0
 		} else if key == keyboard.KeySpace {
 			input = input[:index] + string(" ") + input[index:]
 			index += 1
-			matchingChoices = match(i.Choices, input)
+			matchingChoices = match(s.Choices, input)
 			viewStartIndex = 0
-			viewEndIndex = min(len(matchingChoices), pageSize)
 			selectedIndex = 0
 		} else if key == keyboard.KeyArrowLeft {
 			index = max(0, index-1)
@@ -85,30 +98,27 @@ func (i *Input) Ask() {
 			index = min(len(input), index+1)
 		} else if key == keyboard.KeyArrowDown {
 			selectedIndex = min(len(matchingChoices)-1, selectedIndex+1)
-			if selectedIndex >= viewEndIndex {
+			if selectedIndex >= viewStartIndex+pageSize {
 				viewStartIndex++
-				viewEndIndex++
 			}
 		} else if key == keyboard.KeyArrowUp {
 			selectedIndex = max(0, selectedIndex-1)
 			if selectedIndex < viewStartIndex {
 				viewStartIndex--
-				viewEndIndex--
 			}
 		} else if key == keyboard.KeyBackspace {
 			if index > 0 {
 				input = input[:index-1] + input[index:]
 				index -= 1
-				matchingChoices = match(i.Choices, input)
+				matchingChoices = match(s.Choices, input)
 				viewStartIndex = 0
-				viewEndIndex = min(len(matchingChoices), pageSize)
 				selectedIndex = 0
 			}
-		} else if keyBindingFn, ok := i.KeyBindings[key]; ok {
-			keyBindingFn(i, matchingChoices[selectedIndex])
+		} else if keyBindingFn, ok := s.KeyBindings[key]; ok {
+			keyBindingFn(s, matchingChoices[selectedIndex])
 		}
 
-		printSelection(i.Prompt, input, index, matchingChoices, selectedIndex, viewStartIndex, viewEndIndex)
+		printSelection(s.Prompt, input, index, matchingChoices, selectedIndex, viewStartIndex, pageSize)
 	}
 }
 
@@ -122,7 +132,7 @@ func match(choices []Choice, input string) []Choice {
 	return matchingChoices
 }
 
-func printSelection(prompt string, input string, index int, matchingChoices []Choice, selectedIndex int, viewStartIndex int, viewEndIndex int) {
+func printSelection(prompt string, input string, index int, matchingChoices []Choice, selectedIndex int, viewStartIndex int, pageSize int) {
 	fmt.Print("\x1b[s")                                  // save cursor
 	fmt.Print("\x1b[1000D")                              // move cursor to left
 	fmt.Print("\x1b[K")                                  // clear line
@@ -130,7 +140,7 @@ func printSelection(prompt string, input string, index int, matchingChoices []Ch
 	fmt.Println()
 	for i := 0; i < len(matchingChoices); i++ {
 		choice := matchingChoices[i]
-		if i >= viewStartIndex && i < viewEndIndex {
+		if i >= viewStartIndex && i < viewStartIndex+pageSize {
 			fmt.Print("\x1b[K") // clear current line
 			matchIndex := strings.Index(strings.ToLower(choice.Value), strings.ToLower(input))
 
@@ -144,6 +154,8 @@ func printSelection(prompt string, input string, index int, matchingChoices []Ch
 			}
 		}
 	}
+	//debug
+	//fmt.Println(strconv.Itoa(selectedIndex) + "-" + strconv.Itoa(viewStartIndex) + "\x1b[0J")
 
 	fmt.Print("\x1b[0J")                                       // clear till end of screen
 	fmt.Print("\x1b[u")                                        // restore cursor

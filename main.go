@@ -60,22 +60,23 @@ func main() {
 	choices = append(choices, input.Choice{Value: "Wisconsin"})
 	choices = append(choices, input.Choice{Value: "Wyoming"})
 
-	i := &input.Input{
-		Prompt:   "> ",
-		Choices:  choices,
-		PageSize: 10,
-		KeyBindings: map[keyboard.Key]func(*input.Input, input.Choice){
-			keyboard.KeyEnter: func(i *input.Input, choice input.Choice) {
+	s := &input.Selection{
+		Prompt:           "> ",
+		Choices:          choices,
+		PageSize:         10,
+		DefaultSelection: "South Carolina",
+		KeyBindings: map[keyboard.Key]func(*input.Selection, input.Choice){
+			keyboard.KeyEnter: func(i *input.Selection, choice input.Choice) {
 				i.Clear()
 				fmt.Println("\nselected: " + choice.Value)
 				os.Exit(0)
 			},
-			keyboard.KeyEsc: func(i *input.Input, choice input.Choice) {
+			keyboard.KeyEsc: func(i *input.Selection, choice input.Choice) {
 				i.Clear()
 				os.Exit(0)
 			}},
 	}
 
-	i.Ask()
+	s.Ask()
 
 }
