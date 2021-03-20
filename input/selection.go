@@ -46,9 +46,8 @@ func (s *Selection) Ask() {
 		_ = keyboard.Close()
 	}()
 
-	pageSize := s.PageSize
-	if pageSize == 0 {
-		pageSize = 10
+	if s.PageSize == 0 {
+		s.PageSize = 10
 	}
 
 	input := ""
@@ -62,17 +61,17 @@ func (s *Selection) Ask() {
 		}
 	}
 
-	matchingChoices := match(s.Choices, input)
+	matchingChoices := s.match(input)
 	viewStartIndex := 0
-	if selectedIndex >= pageSize {
-		if selectedIndex > len(matchingChoices)-pageSize {
-			viewStartIndex = len(matchingChoices) - pageSize
+	if selectedIndex >= s.PageSize {
+		if selectedIndex > len(matchingChoices)-s.PageSize {
+			viewStartIndex = len(matchingChoices) - s.PageSize
 		} else {
 			viewStartIndex = selectedIndex
 		}
 	}
 
-	printSelection(s.Prompt, input, index, matchingChoices, selectedIndex, viewStartIndex, pageSize)
+	s.render(input, index, matchingChoices, selectedIndex, viewStartIndex)
 
 	for {
 		char, key, err := keyboard.GetKey()
@@ -83,13 +82,13 @@ func (s *Selection) Ask() {
 		if char >= 32 && char <= 126 {
 			input = input[:index] + string(char) + input[index:]
 			index += 1
-			matchingChoices = match(s.Choices, input)
+			matchingChoices = s.match(input)
 			viewStartIndex = 0
 			selectedIndex = 0
 		} else if key == keyboard.KeySpace {
 			input = input[:index] + string(" ") + input[index:]
 			index += 1
-			matchingChoices = match(s.Choices, input)
+			matchingChoices = s.match(input)
 			viewStartIndex = 0
 			selectedIndex = 0
 		} else if key == keyboard.KeyArrowLeft {
@@ -98,7 +97,7 @@ func (s *Selection) Ask() {
 			index = min(len(input), index+1)
 		} else if key == keyboard.KeyArrowDown {
 			selectedIndex = min(len(matchingChoices)-1, selectedIndex+1)
-			if selectedIndex >= viewStartIndex+pageSize {
+			if selectedIndex >= viewStartIndex+s.PageSize {
 				viewStartIndex++
 			}
 		} else if key == keyboard.KeyArrowUp {
@@ -110,7 +109,7 @@ func (s *Selection) Ask() {
 			if index > 0 {
 				input = input[:index-1] + input[index:]
 				index -= 1
-				matchingChoices = match(s.Choices, input)
+				matchingChoices = s.match(input)
 				viewStartIndex = 0
 				selectedIndex = 0
 			}
@@ -118,13 +117,13 @@ func (s *Selection) Ask() {
 			keyBindingFn(s, matchingChoices[selectedIndex])
 		}
 
-		printSelection(s.Prompt, input, index, matchingChoices, selectedIndex, viewStartIndex, pageSize)
+		s.render(input, index, matchingChoices, selectedIndex, viewStartIndex)
 	}
 }
 
-func match(choices []Choice, input string) []Choice {
+func (s *Selection) match(input string) []Choice {
 	matchingChoices := make([]Choice, 0)
-	for _, choice := range choices {
+	for _, choice := range s.Choices {
 		if strings.Contains(strings.ToLower(choice.Value), strings.ToLower(input)) {
 			matchingChoices = append(matchingChoices, choice)
 		}
@@ -132,15 +131,15 @@ func match(choices []Choice, input string) []Choice {
 	return matchingChoices
 }
 
-func printSelection(prompt string, input string, index int, matchingChoices []Choice, selectedIndex int, viewStartIndex int, pageSize int) {
-	fmt.Print("\x1b[s")                                  // save cursor
-	fmt.Print("\x1b[1000D")                              // move cursor to left
-	fmt.Print("\x1b[K")                                  // clear line
-	fmt.Print("\x1b[1;34m" + prompt + "\x1b[0m" + input) // print input
+func (s *Selection) render(input string, index int, matchingChoices []Choice, selectedIndex int, viewStartIndex int) {
+	fmt.Print("\x1b[s")                                    // save cursor
+	fmt.Print("\x1b[1000D")                                // move cursor to left
+	fmt.Print("\x1b[K")                                    // clear line
+	fmt.Print("\x1b[1;34m" + s.Prompt + "\x1b[0m" + input) // print input
 	fmt.Println()
 	for i := 0; i < len(matchingChoices); i++ {
 		choice := matchingChoices[i]
-		if i >= viewStartIndex && i < viewStartIndex+pageSize {
+		if i >= viewStartIndex && i < viewStartIndex+s.PageSize {
 			fmt.Print("\x1b[K") // clear current line
 			matchIndex := strings.Index(strings.ToLower(choice.Value), strings.ToLower(input))
 
@@ -157,10 +156,10 @@ func printSelection(prompt string, input string, index int, matchingChoices []Ch
 	//debug
 	//fmt.Println(strconv.Itoa(selectedIndex) + "-" + strconv.Itoa(viewStartIndex) + "\x1b[0J")
 
-	fmt.Print("\x1b[0J")                                       // clear till end of screen
-	fmt.Print("\x1b[u")                                        // restore cursor
-	fmt.Print("\x1b[1000D")                                    // move cursor back to left
-	fmt.Print("\x1b[" + strconv.Itoa(index+len(prompt)) + "C") // move cursor right
+	fmt.Print("\x1b[0J")                                         // clear till end of screen
+	fmt.Print("\x1b[u")                                          // restore cursor
+	fmt.Print("\x1b[1000D")                                      // move cursor back to left
+	fmt.Print("\x1b[" + strconv.Itoa(index+len(s.Prompt)) + "C") // move cursor right
 }
 
 func max(i int, j int) int {
