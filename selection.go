@@ -18,6 +18,7 @@ type Selection struct {
 	DefaultSelection string
 	ValueFn          func(*Choice) string
 	KeyBindings      map[keyboard.Key]func(*Selection, Choice)
+	closed           bool
 }
 
 type Choice struct {
@@ -25,8 +26,9 @@ type Choice struct {
 	Value string
 }
 
-func (s *Selection) Clear() {
+func (s *Selection) Close() {
 	fmt.Print("\x1b[0J") // clear till end of screen
+	s.closed = true
 }
 
 func (s *Selection) Ask() {
@@ -75,6 +77,10 @@ func (s *Selection) Ask() {
 	s.render(input, index, matchingChoices, selectedIndex, viewStartIndex)
 
 	for {
+		if s.closed {
+			return
+		}
+
 		char, key, err := keyboard.GetKey()
 		if err != nil {
 			panic(err)
@@ -118,7 +124,9 @@ func (s *Selection) Ask() {
 			keyBindingFn(s, matchingChoices[selectedIndex])
 		}
 
-		s.render(input, index, matchingChoices, selectedIndex, viewStartIndex)
+		if !s.closed {
+			s.render(input, index, matchingChoices, selectedIndex, viewStartIndex)
+		}
 	}
 }
 

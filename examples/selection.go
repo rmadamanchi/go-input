@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/eiannone/keyboard"
 	"github.com/rmadamanchi/go-input"
@@ -70,13 +69,11 @@ func main() {
 		},
 		KeyBindings: map[keyboard.Key]func(*input.Selection, input.Choice){
 			keyboard.KeyEnter: func(i *input.Selection, choice input.Choice) {
-				i.Clear()
+				i.Close()
 				fmt.Println("\nselected: " + choice.Value)
-				os.Exit(0)
 			},
 			keyboard.KeyEsc: func(i *input.Selection, choice input.Choice) {
-				i.Clear()
-				os.Exit(0)
+				i.Close()
 			}},
 	}
 
