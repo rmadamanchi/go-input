@@ -2,13 +2,10 @@ package input
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/eiannone/keyboard"
-	"golang.org/x/term"
 )
 
 type Selection struct {
@@ -25,7 +22,8 @@ type Selection struct {
 	matchingChoices []Choice
 	viewStartIndex  int
 
-	closed bool
+	initialized bool
+	hidden      bool
 }
 
 type Choice struct {
@@ -35,26 +33,10 @@ type Choice struct {
 
 func (s *Selection) Hide() {
 	fmt.Print("\x1b[1000D\x1b[0J") // move cursor to beginning of line; clear till end of screen
-	s.closed = true
+	s.hidden = true
 }
 
-func (s *Selection) Ask() {
-	state, err := term.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		log.Fatalln("setting stdin to raw:", err)
-	}
-	defer func() {
-		if err := term.Restore(int(os.Stdin.Fd()), state); err != nil {
-			log.Println("warning, failed to restore terminal:", err)
-		}
-	}()
-
-	if err := keyboard.Open(); err != nil {
-		panic(err)
-	}
-	defer func() {
-		_ = keyboard.Close()
-	}()
+func (s *Selection) initialize() {
 
 	if s.PageSize == 0 {
 		s.PageSize = 10
@@ -81,19 +63,19 @@ func (s *Selection) Ask() {
 		}
 	}
 
-	s.inputLoop()
+	s.initialized = true
 }
 
 func (s *Selection) Show() {
-	s.closed = false
-	s.inputLoop()
-}
+	if !s.initialized {
+		s.initialize()
+	}
+	s.hidden = false
 
-func (s *Selection) inputLoop() {
 	s.render()
 
 	for {
-		if s.closed {
+		if s.hidden {
 			return
 		}
 
@@ -140,7 +122,7 @@ func (s *Selection) inputLoop() {
 			keyBindingFn(s, s.matchingChoices[s.selectedIndex])
 		}
 
-		if !s.closed {
+		if !s.hidden {
 			s.render()
 		}
 	}

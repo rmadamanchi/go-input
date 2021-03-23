@@ -9,6 +9,9 @@ import (
 )
 
 func main() {
+	state := input.InitTerminal()
+	defer func() { input.RestoreTerminal(state) }()
+
 	choices := make([]input.Choice, 0)
 	choices = append(choices, input.Choice{Value: "Alaska"})
 	choices = append(choices, input.Choice{Value: "Arizona"})
@@ -71,18 +74,18 @@ func main() {
 		KeyBindings: map[keyboard.Key]func(*input.Selection, input.Choice){
 			keyboard.KeyEnter: func(i *input.Selection, choice input.Choice) {
 				i.Hide()
-				fmt.Println("\nselected: " + choice.Value)
+				fmt.Println("selected: " + choice.Value)
 			},
 			keyboard.KeyEsc: func(i *input.Selection, choice input.Choice) {
 				i.Hide()
 			},
-			keyboard.KeyCtrlC: func(i *input.Selection, choice input.Choice) {
+			keyboard.KeyCtrlR: func(i *input.Selection, choice input.Choice) {
 				i.Hide()
 				time.Sleep(2 * time.Second)
 				i.Show()
 			}},
 	}
 
-	s.Ask()
+	s.Show()
 
 }
