@@ -9,8 +9,8 @@ import (
 )
 
 func main() {
-	state := input.InitTerminal()
-	defer func() { input.RestoreTerminal(state) }()
+	state, _ := input.InitTerminal()
+	defer func() { _ = input.RestoreTerminal(state) }()
 
 	choices := make([]input.Choice, 0)
 	choices = append(choices, input.Choice{Value: "Alaska"})
