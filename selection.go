@@ -177,8 +177,6 @@ func (s *Selection) render() {
 			}
 		}
 	}
-	//debug
-	//fmt.Println(strconv.Itoa(selectedIndex) + "-" + strconv.Itoa(viewStartIndex) + "\x1b[0J")
 
 	fmt.Print("\x1b[0J")                                                 // clear till end of screen
 	fmt.Print("\x1b[u")                                                  // restore cursor
