@@ -4,8 +4,8 @@ import (
 	"strings"
 )
 
+// this is not a super robust matching algorithm but it works for simple purposes
 func formatMatches(value string, terms []string, matchStart string, matchEnd string) string {
-	//fmt.Println(terms)
 	formattedValue := value
 	for _, term := range terms {
 		matchIndex := strings.Index(strings.ToLower(formattedValue), strings.ToLower(term))
