@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/eiannone/keyboard"
 	"github.com/rmadamanchi/go-input"
@@ -71,18 +70,16 @@ func main() {
 		ValueFn: func(c *input.Choice) string {
 			return c.Value
 		},
-		KeyBindings: map[keyboard.Key]func(*input.Selection, input.Choice){
-			keyboard.KeyEnter: func(i *input.Selection, choice input.Choice) {
+		KeyBindings: map[keyboard.Key]func(*input.Selection, *input.Choice) {
+			keyboard.KeyEnter: func(i *input.Selection, choice *input.Choice) {
 				i.Hide()
 				fmt.Println("selected: " + choice.Value)
 			},
-			keyboard.KeyEsc: func(i *input.Selection, choice input.Choice) {
+			keyboard.KeyEsc: func(i *input.Selection, choice *input.Choice) {
 				i.Hide()
 			},
-			keyboard.KeyCtrlR: func(i *input.Selection, choice input.Choice) {
+			keyboard.KeyCtrlC: func(i *input.Selection, choice *input.Choice) {
 				i.Hide()
-				time.Sleep(2 * time.Second)
-				i.Show()
 			}},
 	}
 

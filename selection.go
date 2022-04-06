@@ -14,7 +14,7 @@ type Selection struct {
 	PageSize         int
 	DefaultSelection string
 	ValueFn          func(*Choice) string
-	KeyBindings      map[keyboard.Key]func(*Selection, Choice)
+	KeyBindings      map[keyboard.Key]func(*Selection, *Choice)
 
 	input           string
 	cursorIndex     int
@@ -100,6 +100,10 @@ func (s *Selection) Show() {
 			s.cursorIndex = max(0, s.cursorIndex-1)
 		} else if key == keyboard.KeyArrowRight {
 			s.cursorIndex = min(len(s.input), s.cursorIndex+1)
+		} else if key == keyboard.KeyHome {
+			s.cursorIndex = 0
+		} else if key == keyboard.KeyEnd {
+			s.cursorIndex = len(s.input)
 		} else if key == keyboard.KeyArrowDown {
 			s.selectedIndex = min(len(s.matchingChoices)-1, s.selectedIndex+1)
 			if s.selectedIndex >= s.viewStartIndex+s.PageSize {
@@ -119,7 +123,11 @@ func (s *Selection) Show() {
 				s.selectedIndex = 0
 			}
 		} else if keyBindingFn, ok := s.KeyBindings[key]; ok {
-			keyBindingFn(s, s.matchingChoices[s.selectedIndex])
+			if len(s.matchingChoices) > 0 {
+				keyBindingFn(s, &(s.matchingChoices[s.selectedIndex]))
+			} else {
+				keyBindingFn(s, nil)
+			}
 		}
 
 		if !s.hidden {
