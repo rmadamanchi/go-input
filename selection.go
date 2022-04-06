@@ -147,7 +147,21 @@ func (s *Selection) getValue(c *Choice) string {
 func (s *Selection) match(input string) []Choice {
 	matchingChoices := make([]Choice, 0)
 	for _, choice := range s.Choices {
-		if strings.Contains(strings.ToLower(s.getValue(&choice)), strings.ToLower(input)) {
+		fields := strings.Fields(input)
+		matches := false
+		if len(fields) == 0 {
+			matches = true
+		} else {
+			allMatches := true
+			for _, field := range fields {
+				if !strings.Contains(strings.ToLower(s.getValue(&choice)), strings.ToLower(field)) {
+					allMatches = false
+				}
+			}
+			matches = allMatches
+		}
+
+		if matches {
 			matchingChoices = append(matchingChoices, choice)
 		}
 	}
@@ -165,15 +179,10 @@ func (s *Selection) render() {
 		if i >= s.viewStartIndex && i < s.viewStartIndex+s.PageSize {
 			value := s.getValue(&choice)
 			fmt.Print("\x1b[K") // clear current line
-			matchIndex := strings.Index(strings.ToLower(value), strings.ToLower(s.input))
-
-			preMatchPart := value[0:matchIndex]
-			matchPart := value[matchIndex : matchIndex+len(s.input)]
-			postMatchPart := value[matchIndex+len(s.input):]
 			if i == s.selectedIndex {
-				fmt.Println("\x1b[30;47m" + preMatchPart + "\x1b[36m" + matchPart + "\x1b[30;47m" + postMatchPart + "\x1b[0m")
+				fmt.Println("\x1b[30;47m" + formatMatches(value, strings.Fields(s.input), "\x1b[36m", "\x1b[30;47m") + "\x1b[0m")
 			} else {
-				fmt.Println(preMatchPart + "\x1b[36m" + matchPart + "\x1b[0m" + postMatchPart)
+				fmt.Println(formatMatches(value, strings.Split(s.input, " "), "\x1b[36m", "\x1b[0m"))
 			}
 		}
 	}
