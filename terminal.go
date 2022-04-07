@@ -3,11 +3,17 @@ package input
 import (
 	"fmt"
 	"github.com/eiannone/keyboard"
+	"golang.org/x/sys/windows"
 	"golang.org/x/term"
 	"os"
 )
 
 func InitTerminal() (*term.State, error) {
+	stdout := windows.Handle(os.Stdout.Fd())
+	var originalMode uint32
+	windows.GetConsoleMode(stdout, &originalMode)
+	windows.SetConsoleMode(stdout, originalMode|windows.ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+
 	state, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		return nil, fmt.Errorf("error setting stdin to raw: %v", err)
@@ -19,6 +25,8 @@ func InitTerminal() (*term.State, error) {
 
 	return state, nil
 }
+
+
 
 func RestoreTerminal(state *term.State) error {
 	if err := term.Restore(int(os.Stdin.Fd()), state); err != nil {
