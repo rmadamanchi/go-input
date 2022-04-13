@@ -62,24 +62,30 @@ func main() {
 	choices = append(choices, input.Choice{Value: "Wisconsin"})
 	choices = append(choices, input.Choice{Value: "Wyoming"})
 
-	s := &input.Selection{
+	var s *input.Selection
+	s = &input.Selection{
 		Prompt:           "> ",
 		Choices:          choices,
 		PageSize:         10,
 		DefaultSelection: "South Carolina",
+		Footer: "Enter: Select, Esc: Exit, Ctrl+C: Copy",
 		ValueFn: func(c *input.Choice) string {
 			return c.Value
 		},
 		KeyBindings: map[keyboard.Key]func(*input.Selection, *input.Choice){
 			keyboard.KeyEnter: func(i *input.Selection, choice *input.Choice) {
 				i.Hide()
-				fmt.Println("selected: " + choice.Value)
+				if choice != nil {
+					fmt.Println("selected: " + choice.Value)
+				}
 			},
 			keyboard.KeyEsc: func(i *input.Selection, choice *input.Choice) {
 				i.Hide()
 			},
 			keyboard.KeyCtrlC: func(i *input.Selection, choice *input.Choice) {
-				i.Hide()
+				if choice != nil {
+					s.FlashMessage("Copied")
+				}			
 			}},
 	}
 

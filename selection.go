@@ -1,9 +1,8 @@
 package input
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
+	"time"
 
 	"github.com/eiannone/keyboard"
 )
@@ -15,6 +14,7 @@ type Selection struct {
 	DefaultSelection string
 	ValueFn          func(*Choice) string
 	KeyBindings      map[keyboard.Key]func(*Selection, *Choice)
+	Footer 			 string
 
 	input           string
 	cursorIndex     int
@@ -24,6 +24,7 @@ type Selection struct {
 
 	initialized bool
 	hidden      bool
+	message 	string
 }
 
 type Choice struct {
@@ -32,7 +33,7 @@ type Choice struct {
 }
 
 func (s *Selection) Hide() {
-	fmt.Print("\x1b[1000D\x1b[0J") // move cursor to beginning of line; clear till end of screen
+	Printer{}.CursorStartOfLine().ClearScreen()
 	s.hidden = true
 }
 
@@ -114,6 +115,12 @@ func (s *Selection) Show() {
 			if s.selectedIndex < s.viewStartIndex {
 				s.viewStartIndex--
 			}
+		} else if key == keyboard.KeyPgdn {
+			s.selectedIndex = min(len(s.matchingChoices)-1, s.selectedIndex+s.PageSize)
+			s.viewStartIndex = min(s.viewStartIndex + s.PageSize, len(s.matchingChoices)-s.PageSize)
+		} else if key == keyboard.KeyPgup {
+			s.selectedIndex = max(0, s.selectedIndex-s.PageSize)
+			s.viewStartIndex = max(s.viewStartIndex - s.PageSize, 0)
 		} else if key == keyboard.KeyBackspace {
 			if s.cursorIndex > 0 {
 				s.input = s.input[:s.cursorIndex-1] + s.input[s.cursorIndex:]
@@ -168,29 +175,49 @@ func (s *Selection) match(input string) []Choice {
 	return matchingChoices
 }
 
+func (s *Selection) FlashMessage(m string) {
+	s.message = m
+	s.render()
+
+	go func() {
+		time.Sleep(1 * time.Second)
+		s.message = ""
+		s.render()
+	}()
+}
+
 func (s *Selection) render() {
-	fmt.Print("\x1b[s")                                      // save cursor
-	fmt.Print("\x1b[1000D")                                  // move cursor to left
-	fmt.Print("\x1b[K")                                      // clear line
-	fmt.Print("\x1b[1;34m" + s.Prompt + "\x1b[0m" + s.input) // print input
-	fmt.Println()
+
+	Printer{}.SaveCursor().HideCursor().CursorStartOfLine().ClearLine()
+	Printer{}.Blue(s.Prompt).Print(s.input).NewLine()
+
+	if len(s.matchingChoices) == 0 {
+		Printer{}.ClearLine().Blue("no matches").NewLine()
+	}
+
 	for i := 0; i < len(s.matchingChoices); i++ {
 		choice := s.matchingChoices[i]
 		if i >= s.viewStartIndex && i < s.viewStartIndex+s.PageSize {
 			value := s.getValue(&choice)
-			fmt.Print("\x1b[K") // clear current line
+			Printer{}.ClearLine()
 			if i == s.selectedIndex {
-				fmt.Println("\x1b[30;47m" + formatMatches(value, strings.Fields(s.input), "\x1b[36m", "\x1b[30;47m") + "\x1b[0m")
+				Printer{}.BgWhite(formatMatches(value, strings.Fields(s.input), "\x1b[36m", "\x1b[30;47m")).NewLine()
 			} else {
-				fmt.Println(formatMatches(value, strings.Split(s.input, " "), "\x1b[36m", "\x1b[0m"))
+				Printer{}.Print(formatMatches(value, strings.Split(s.input, " "), "\x1b[36m", "\x1b[0m")).NewLine()
 			}
 		}
 	}
 
-	fmt.Print("\x1b[0J")                                                 // clear till end of screen
-	fmt.Print("\x1b[u")                                                  // restore cursor
-	fmt.Print("\x1b[1000D")                                              // move cursor back to left
-	fmt.Print("\x1b[" + strconv.Itoa(s.cursorIndex+len(s.Prompt)) + "C") // move cursor right
+	if s.Footer != "" {
+		Printer{}.ClearLine().Yellow(s.Footer).NewLine()
+	}
+
+	if s.message != "" {
+		Printer{}.ClearLine().Green(s.message).NewLine()
+	}
+
+	Printer{}.ClearScreen().RestoreCursor().CursorStartOfLine().CursorRight(s.cursorIndex+len(s.Prompt))
+	Printer{}.ShowCursor()
 }
 
 func max(i int, j int) int {
