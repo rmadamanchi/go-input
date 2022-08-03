@@ -6,7 +6,6 @@ import (
 )
 
 type Printer struct {
-
 }
 
 var (
@@ -65,6 +64,11 @@ func (p Printer) Yellow(s string) Printer {
 
 func (p Printer) Green(s string) Printer {
 	fmt.Print("\x1b[1;32m" + s + ansiReset)
+	return p
+}
+
+func (p Printer) Gray(s string) Printer {
+	fmt.Print("\x1b[1;30;1m" + s + ansiReset)
 	return p
 }
 

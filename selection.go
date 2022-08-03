@@ -14,7 +14,7 @@ type Selection struct {
 	DefaultSelection string
 	ValueFn          func(*Choice) string
 	KeyBindings      map[keyboard.Key]func(*Selection, *Choice)
-	Footer 			 string
+	Footer           string
 
 	input           string
 	cursorIndex     int
@@ -24,12 +24,13 @@ type Selection struct {
 
 	initialized bool
 	hidden      bool
-	message 	string
+	message     string
 }
 
 type Choice struct {
-	Data  interface{}
-	Value string
+	Data   interface{}
+	Value  string
+	Suffix string
 }
 
 func (s *Selection) Hide() {
@@ -117,10 +118,10 @@ func (s *Selection) Show() {
 			}
 		} else if key == keyboard.KeyPgdn {
 			s.selectedIndex = min(len(s.matchingChoices)-1, s.selectedIndex+s.PageSize)
-			s.viewStartIndex = min(s.viewStartIndex + s.PageSize, len(s.matchingChoices)-s.PageSize)
+			s.viewStartIndex = min(s.viewStartIndex+s.PageSize, len(s.matchingChoices)-s.PageSize)
 		} else if key == keyboard.KeyPgup {
 			s.selectedIndex = max(0, s.selectedIndex-s.PageSize)
-			s.viewStartIndex = max(s.viewStartIndex - s.PageSize, 0)
+			s.viewStartIndex = max(s.viewStartIndex-s.PageSize, 0)
 		} else if key == keyboard.KeyBackspace {
 			if s.cursorIndex > 0 {
 				s.input = s.input[:s.cursorIndex-1] + s.input[s.cursorIndex:]
@@ -187,37 +188,42 @@ func (s *Selection) FlashMessage(m string) {
 }
 
 func (s *Selection) render() {
+	p := Printer{}
 
-	Printer{}.SaveCursor().HideCursor().CursorStartOfLine().ClearLine()
-	Printer{}.Blue(s.Prompt).Print(s.input).NewLine()
+	p.SaveCursor().HideCursor().CursorStartOfLine().ClearLine()
+	p.Blue(s.Prompt).Print(s.input).NewLine()
 
 	if len(s.matchingChoices) == 0 {
-		Printer{}.ClearLine().Blue("no matches").NewLine()
+		p.ClearLine().Blue("no matches").NewLine()
 	}
 
 	for i := 0; i < len(s.matchingChoices); i++ {
 		choice := s.matchingChoices[i]
 		if i >= s.viewStartIndex && i < s.viewStartIndex+s.PageSize {
 			value := s.getValue(&choice)
-			Printer{}.ClearLine()
+			p.ClearLine()
 			if i == s.selectedIndex {
-				Printer{}.BgWhite(formatMatches(value, strings.Fields(s.input), "\x1b[36m", "\x1b[30;47m")).NewLine()
+				p.BgWhite(formatMatches(value, strings.Fields(s.input), "\x1b[36m", "\x1b[30;47m"))
 			} else {
-				Printer{}.Print(formatMatches(value, strings.Split(s.input, " "), "\x1b[36m", "\x1b[0m")).NewLine()
+				p.Print(formatMatches(value, strings.Split(s.input, " "), "\x1b[36m", "\x1b[0m"))
 			}
+			if choice.Suffix != "" {
+				p.Gray(" " + choice.Suffix)
+			}
+			p.NewLine()
 		}
 	}
 
 	if s.Footer != "" {
-		Printer{}.ClearLine().Yellow(s.Footer).NewLine()
+		p.ClearLine().Yellow(s.Footer).NewLine()
 	}
 
 	if s.message != "" {
-		Printer{}.ClearLine().Green(s.message).NewLine()
+		p.ClearLine().Green(s.message).NewLine()
 	}
 
-	Printer{}.ClearScreen().RestoreCursor().CursorStartOfLine().CursorRight(s.cursorIndex+len(s.Prompt))
-	Printer{}.ShowCursor()
+	p.ClearScreen().RestoreCursor().CursorStartOfLine().CursorRight(s.cursorIndex + len(s.Prompt))
+	p.ShowCursor()
 }
 
 func max(i int, j int) int {

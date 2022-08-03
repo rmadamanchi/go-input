@@ -15,7 +15,7 @@ func main() {
 	choices = append(choices, input.Choice{Value: "Alaska"})
 	choices = append(choices, input.Choice{Value: "Arizona"})
 	choices = append(choices, input.Choice{Value: "Arkansas"})
-	choices = append(choices, input.Choice{Value: "California"})
+	choices = append(choices, input.Choice{Value: "California", Suffix: "(nice weather)"})
 	choices = append(choices, input.Choice{Value: "Colorado"})
 	choices = append(choices, input.Choice{Value: "Connecticut"})
 	choices = append(choices, input.Choice{Value: "Delaware"})
@@ -34,7 +34,7 @@ func main() {
 	choices = append(choices, input.Choice{Value: "Massachusetts"})
 	choices = append(choices, input.Choice{Value: "Michigan"})
 	choices = append(choices, input.Choice{Value: "Minnesota"})
-	choices = append(choices, input.Choice{Value: "Mississippi"})
+	choices = append(choices, input.Choice{Value: "Mississippi", Suffix: "(too cold)"})
 	choices = append(choices, input.Choice{Value: "Missouri"})
 	choices = append(choices, input.Choice{Value: "Montana"})
 	choices = append(choices, input.Choice{Value: "Nebraska"})
@@ -53,7 +53,7 @@ func main() {
 	choices = append(choices, input.Choice{Value: "South Carolina"})
 	choices = append(choices, input.Choice{Value: "South Dakota"})
 	choices = append(choices, input.Choice{Value: "Tennessee"})
-	choices = append(choices, input.Choice{Value: "Texas"})
+	choices = append(choices, input.Choice{Value: "Texas", Suffix: "(too hot)"})
 	choices = append(choices, input.Choice{Value: "Utah"})
 	choices = append(choices, input.Choice{Value: "Vermont"})
 	choices = append(choices, input.Choice{Value: "Virginia"})
@@ -68,7 +68,7 @@ func main() {
 		Choices:          choices,
 		PageSize:         10,
 		DefaultSelection: "South Carolina",
-		Footer: "Enter: Select, Esc: Exit, Ctrl+C: Copy",
+		Footer:           "Enter: Select, Esc: Exit, Ctrl+C: Copy",
 		ValueFn: func(c *input.Choice) string {
 			return c.Value
 		},
@@ -85,7 +85,7 @@ func main() {
 			keyboard.KeyCtrlC: func(i *input.Selection, choice *input.Choice) {
 				if choice != nil {
 					s.FlashMessage("Copied")
-				}			
+				}
 			}},
 	}
 
